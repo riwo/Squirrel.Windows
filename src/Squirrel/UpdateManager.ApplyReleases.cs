@@ -508,7 +508,7 @@ namespace Squirrel
                     var regKey = default(RegistryKey);
 
                     try {
-                        baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
+                        baseKey = UacHelper.GetRegistryBaseKey();
                         regKey = baseKey.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers");
 
                         if (regKey == null) return;

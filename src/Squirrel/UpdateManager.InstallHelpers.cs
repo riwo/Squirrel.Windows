@@ -27,8 +27,9 @@ namespace Squirrel
                 this.rootAppDirectory = rootAppDirectory;
             }
 
-            const string currentVersionRegSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
-            const string uninstallRegSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+            const string currentVersionRegSubKey = @"Software\Microsoft\Windows\CurrentVersion";
+            const string uninstallRegSubKey = currentVersionRegSubKey + "\\Uninstall";
+
             public async Task<RegistryKey> CreateUninstallerRegistryEntry(string uninstallCmd, string quietSwitch)
             {
                 var releaseContent = File.ReadAllText(Path.Combine(rootAppDirectory, "packages", "RELEASES"), Encoding.UTF8);
@@ -43,11 +44,11 @@ namespace Squirrel
                 var targetIco = Path.Combine(rootAppDirectory, "app.ico");
 
                 // NB: Sometimes the Uninstall key doesn't exist
-                using (var parentKey =
-                    RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default)
-                        .CreateSubKey("Uninstall", RegistryKeyPermissionCheck.ReadWriteSubTree)) { ; }
+                UacHelper.GetRegistryBaseKey()
+                        .CreateSubKey(uninstallRegSubKey, RegistryKeyPermissionCheck.ReadWriteSubTree)
+                        .Dispose();
 
-                var key = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default)
+                var key = UacHelper.GetRegistryBaseKey()
                     .CreateSubKey(uninstallRegSubKey + "\\" + applicationName, RegistryKeyPermissionCheck.ReadWriteSubTree);
 
                 if (zp.IconUrl != null && !File.Exists(targetIco)) {
@@ -140,7 +141,7 @@ namespace Squirrel
 
             public void RemoveUninstallerRegistryEntry()
             {
-                var key = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default)
+                var key = UacHelper.GetRegistryBaseKey()
                     .OpenSubKey(uninstallRegSubKey, true);
                 key.DeleteSubKeyTree(applicationName);
             }

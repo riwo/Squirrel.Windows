@@ -4,135 +4,116 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using Microsoft.Win32;
 
-public static class UacHelper
-{
-    private const string uacRegistryKey = "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System";
-    private const string uacRegistryValue = "EnableLUA";
+namespace Squirrel {
+    public static class UacHelper {
+        private static uint STANDARD_RIGHTS_READ = 0x00020000;
+        private static uint TOKEN_QUERY = 0x0008;
+        private static uint TOKEN_READ = (STANDARD_RIGHTS_READ | TOKEN_QUERY);
 
-    private static uint STANDARD_RIGHTS_READ = 0x00020000;
-    private static uint TOKEN_QUERY = 0x0008;
-    private static uint TOKEN_READ = (STANDARD_RIGHTS_READ | TOKEN_QUERY);
+        [DllImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool OpenProcessToken(IntPtr ProcessHandle, UInt32 DesiredAccess, out IntPtr TokenHandle);
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    static extern bool OpenProcessToken(IntPtr ProcessHandle, UInt32 DesiredAccess, out IntPtr TokenHandle);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool CloseHandle(IntPtr hObject);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    static extern bool CloseHandle(IntPtr hObject);
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool GetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, IntPtr TokenInformation, uint TokenInformationLength, out uint ReturnLength);
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    public static extern bool GetTokenInformation(IntPtr TokenHandle, TOKEN_INFORMATION_CLASS TokenInformationClass, IntPtr TokenInformation, uint TokenInformationLength, out uint ReturnLength);
+        public enum TOKEN_INFORMATION_CLASS {
+            TokenUser = 1,
+            TokenGroups,
+            TokenPrivileges,
+            TokenOwner,
+            TokenPrimaryGroup,
+            TokenDefaultDacl,
+            TokenSource,
+            TokenType,
+            TokenImpersonationLevel,
+            TokenStatistics,
+            TokenRestrictedSids,
+            TokenSessionId,
+            TokenGroupsAndPrivileges,
+            TokenSessionReference,
+            TokenSandBoxInert,
+            TokenAuditPolicy,
+            TokenOrigin,
+            TokenElevationType,
+            TokenLinkedToken,
+            TokenElevation,
+            TokenHasRestrictions,
+            TokenAccessInformation,
+            TokenVirtualizationAllowed,
+            TokenVirtualizationEnabled,
+            TokenIntegrityLevel,
+            TokenUIAccess,
+            TokenMandatoryPolicy,
+            TokenLogonSid,
+            MaxTokenInfoClass
+        }
 
-    public enum TOKEN_INFORMATION_CLASS
-    {
-        TokenUser = 1,
-        TokenGroups,
-        TokenPrivileges,
-        TokenOwner,
-        TokenPrimaryGroup,
-        TokenDefaultDacl,
-        TokenSource,
-        TokenType,
-        TokenImpersonationLevel,
-        TokenStatistics,
-        TokenRestrictedSids,
-        TokenSessionId,
-        TokenGroupsAndPrivileges,
-        TokenSessionReference,
-        TokenSandBoxInert,
-        TokenAuditPolicy,
-        TokenOrigin,
-        TokenElevationType,
-        TokenLinkedToken,
-        TokenElevation,
-        TokenHasRestrictions,
-        TokenAccessInformation,
-        TokenVirtualizationAllowed,
-        TokenVirtualizationEnabled,
-        TokenIntegrityLevel,
-        TokenUIAccess,
-        TokenMandatoryPolicy,
-        TokenLogonSid,
-        MaxTokenInfoClass
-    }
+        public enum TOKEN_ELEVATION_TYPE {
+            TokenElevationTypeDefault = 1,
+            TokenElevationTypeFull,
+            TokenElevationTypeLimited
+        }
 
-    public enum TOKEN_ELEVATION_TYPE
-    {
-        TokenElevationTypeDefault = 1,
-        TokenElevationTypeFull,
-        TokenElevationTypeLimited
-    }
-
-    public static bool IsUacEnabled
-    {
-        get
-        {
-            using (RegistryKey uacKey = Registry.LocalMachine.OpenSubKey(uacRegistryKey, false))
-            {
-                bool result = uacKey.GetValue(uacRegistryValue).Equals(1);
-                return result;
+        public static bool IsUacEnabled {
+            get {
+                using (var uacKey = Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", false)) {
+                    return uacKey.GetValue("EnableLUA").Equals(1);
+                }
             }
         }
-    }
 
-    public static bool IsProcessElevated
-    {
-        get
-        {
-            if (IsUacEnabled)
-            {
-                IntPtr tokenHandle = IntPtr.Zero;
-                if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TOKEN_READ, out tokenHandle))
-                {
-                    throw new ApplicationException("Could not get process token.  Win32 Error Code: " +
-                                                   Marshal.GetLastWin32Error());
+        public static bool IsProcessElevated {
+            get {
+                using (var identity = WindowsIdentity.GetCurrent()) {
+                    if (identity.IsSystem)
+                        return true;
                 }
 
-                try
-                {
-                    TOKEN_ELEVATION_TYPE elevationResult = TOKEN_ELEVATION_TYPE.TokenElevationTypeDefault;
+                if (IsUacEnabled) {
+                    if (!OpenProcessToken(Process.GetCurrentProcess().Handle, TOKEN_READ, out var tokenHandle))
+                        throw new ApplicationException("Could not get process token.  Win32 Error Code: " + Marshal.GetLastWin32Error());
 
-                    int elevationResultSize = Marshal.SizeOf(typeof(TOKEN_ELEVATION_TYPE));
-                    uint returnedSize = 0;
-
-                    IntPtr elevationTypePtr = Marshal.AllocHGlobal(elevationResultSize);
                     try
                     {
-                        bool success = GetTokenInformation(tokenHandle, TOKEN_INFORMATION_CLASS.TokenElevationType,
-                                                           elevationTypePtr, (uint)elevationResultSize,
-                                                           out returnedSize);
-                        if (success)
+                        var elevationResultSize = Marshal.SizeOf(typeof(TOKEN_ELEVATION_TYPE).GetEnumUnderlyingType());
+                        var elevationTypePtr = Marshal.AllocHGlobal(elevationResultSize);
+                        try
                         {
-                            elevationResult = (TOKEN_ELEVATION_TYPE)Marshal.ReadInt32(elevationTypePtr);
-                            bool isProcessAdmin = elevationResult == TOKEN_ELEVATION_TYPE.TokenElevationTypeFull;
-                            return isProcessAdmin;
+                            var success = GetTokenInformation(tokenHandle, TOKEN_INFORMATION_CLASS.TokenElevationType,
+                                                              elevationTypePtr, (uint)elevationResultSize,
+                                                              out _);
+                            if (!success)
+                                throw new ApplicationException("Unable to determine the current elevation.");
+
+                            var elevationResult = (TOKEN_ELEVATION_TYPE)Marshal.ReadInt32(elevationTypePtr);
+                            return elevationResult == TOKEN_ELEVATION_TYPE.TokenElevationTypeFull;
                         }
-                        else
-                        {
-                            throw new ApplicationException("Unable to determine the current elevation.");
+                        finally {
+                            if (elevationTypePtr != IntPtr.Zero)
+                                Marshal.FreeHGlobal(elevationTypePtr);
                         }
                     }
-                    finally
-                    {
-                        if (elevationTypePtr != IntPtr.Zero)
-                            Marshal.FreeHGlobal(elevationTypePtr);
+                    finally {
+                        if (tokenHandle != IntPtr.Zero)
+                            CloseHandle(tokenHandle);
                     }
-                }
-                finally
-                {
-                    if (tokenHandle != IntPtr.Zero)
-                        CloseHandle(tokenHandle);
+                } else {
+                    var identity = WindowsIdentity.GetCurrent();
+                    var principal = new WindowsPrincipal(identity);
+                    return principal.IsInRole(WindowsBuiltInRole.Administrator) || principal.IsInRole(0x200); //Domain Administrator
                 }
             }
-            else
-            {
-                WindowsIdentity identity = WindowsIdentity.GetCurrent();
-                WindowsPrincipal principal = new WindowsPrincipal(identity);
-                bool result = principal.IsInRole(WindowsBuiltInRole.Administrator)
-                           || principal.IsInRole(0x200); //Domain Administrator
-                return result;
-            }
+        }
+
+        public static RegistryKey GetRegistryBaseKey() {
+            return IsProcessElevated ? 
+                RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32) :
+                RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default);
         }
     }
 }
