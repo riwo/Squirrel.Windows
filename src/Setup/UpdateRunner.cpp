@@ -34,7 +34,7 @@ void CUpdateRunner::DisplayErrorMessage(CString& errorMessage, wchar_t* logFile)
 	}
 }
 
-HRESULT IsUacRequired()
+HRESULT CUpdateRunner::IsUacRequired()
 {
 	wchar_t* uacRequiredFlag = (wchar_t*)LoadResource(NULL, FindResource(NULL, (LPCWSTR)IDR_UAC_REQUIRED_FLAG, L"FLAGS"));
 	if (uacRequiredFlag != NULL && uacRequiredFlag[0] == '1')
