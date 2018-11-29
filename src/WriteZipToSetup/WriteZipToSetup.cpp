@@ -62,11 +62,28 @@ int wmain(int argc, wchar_t* argv[])
 		if (argc != 4) goto fail;
 		return CopyResourcesToStubExecutable(argv[2], argv[3]);
 	}
-	bool setFramework = false;
-	if (argc == 5 && wcscmp(argv[3], L"--set-required-framework") == 0) {
-		setFramework = true;
-	} else if (argc != 3) {
+
+	// First three arguments are required (EXE, target setup EXE and ZIP-path)
+	int argsIndex = 3;
+	if (argc < argsIndex) {
 		goto fail;
+	}
+
+	wchar_t* pwszSetRequiredFramework = NULL;
+	wchar_t* pwszRequireUac = NULL;
+	while (argc > argsIndex)
+	{
+		if (wcscmp(argv[argsIndex], L"--set-required-framework") == 0) {
+			if (argc <= ++argsIndex) {
+				goto fail;
+			}
+			pwszSetRequiredFramework = argv[argsIndex++];
+		} else if (wcscmp(argv[argsIndex], L"--require-uac") == 0) {
+			if (argc <= ++argsIndex) {
+				goto fail;
+			}
+			pwszRequireUac = argv[argsIndex++];
+		}
 	}
 
 	wprintf(L"Setup: %s, Zip: %s\n", argv[1], argv[2]);
@@ -109,8 +126,15 @@ int wmain(int argc, wchar_t* argv[])
 		goto fail;
 	}
 
-	if (setFramework) {
-		if (!UpdateResource(hRes, L"FLAGS", (LPCWSTR)132, 0x0409, argv[4], (wcslen(argv[4])+1) * sizeof(wchar_t))) {
+	if (pwszSetRequiredFramework) {
+		if (!UpdateResource(hRes, L"FLAGS", (LPCWSTR)132, 0x0409, pwszSetRequiredFramework, (wcslen(pwszSetRequiredFramework)+1) * sizeof(wchar_t))) {
+			printf("Failed to update resouce\n");
+			goto fail;
+		}
+	}
+
+	if (pwszRequireUac) {
+		if (!UpdateResource(hRes, L"FLAGS", (LPCWSTR)133, 0x0409, pwszRequireUac, (wcslen(pwszRequireUac) + 1) * sizeof(wchar_t))) {
 			printf("Failed to update resouce\n");
 			goto fail;
 		}

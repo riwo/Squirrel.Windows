@@ -34,6 +34,14 @@ void CUpdateRunner::DisplayErrorMessage(CString& errorMessage, wchar_t* logFile)
 	}
 }
 
+HRESULT IsUacRequired()
+{
+	wchar_t* uacRequiredFlag = (wchar_t*)LoadResource(NULL, FindResource(NULL, (LPCWSTR)IDR_UAC_REQUIRED_FLAG, L"FLAGS"));
+	if (uacRequiredFlag != NULL && uacRequiredFlag[0] == '1')
+		return S_OK;
+	return S_FALSE;
+}
+
 HRESULT CUpdateRunner::AreWeUACElevated()
 {
 	HANDLE hProcess = GetCurrentProcess();
@@ -108,7 +116,7 @@ HRESULT GetDesktopAutomationObject(REFIID riid, void **ppv)
 	return spdispView->QueryInterface(riid, ppv);
 }
 
-HRESULT CUpdateRunner::ShellExecuteFromExplorer(LPWSTR pszFile, LPWSTR pszParameters)
+HRESULT CUpdateRunner::ShellExecuteFromExplorer(LPWSTR pszFile, LPWSTR pszParameters, BOOL fRunElevated)
 {
 	HRESULT hr;
 
@@ -124,7 +132,7 @@ HRESULT CUpdateRunner::ShellExecuteFromExplorer(LPWSTR pszFile, LPWSTR pszParame
 		CComBSTR(pszFile),
 		CComVariant(pszParameters ? pszParameters : L""),
 		CComVariant(L""),
-		CComVariant(L""),
+		CComVariant(fRunElevated ? L"runas" : L""),
 		CComVariant(SW_SHOWDEFAULT));
 }
 

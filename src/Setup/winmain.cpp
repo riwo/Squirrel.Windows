@@ -45,14 +45,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	hr = _Module->Init(NULL, hInstance);
 
 	bool isQuiet = (cmdLine.Find(L"-s") >= 0);
+	bool isUacRequired = CUpdateRunner::IsUacRequired() == S_OK;
 	bool weAreUACElevated = CUpdateRunner::AreWeUACElevated() == S_OK;
-	bool attemptingToRerun = (cmdLine.Find(L"--rerunningWithoutUAC") >= 0);
 
-	if (weAreUACElevated && attemptingToRerun) {
-		CUpdateRunner::DisplayErrorMessage(CString(L"Please re-run this installer as a normal user instead of \"Run as Administrator\"."), NULL);
-		exitCode = E_FAIL;
-		goto out;
+	if (weAreUACElevated) {
+		if (cmdLine.Find(L"--rerunningWithoutUAC") >= 0) {
+			CUpdateRunner::DisplayErrorMessage(CString(L"Please re-run this installer as a normal user instead of \"Run as Administrator\"."), NULL);
+			exitCode = E_FAIL;
+			goto out;
+		}
+	} else {
+		if (cmdLine.Find(L"--rerunningWithUAC") >= 0) {
+			CUpdateRunner::DisplayErrorMessage(CString(L"Unable to run this setup with elevated rights."), NULL);
+			exitCode = E_FAIL;
+			goto out;
+		}
 	}
+
 
 	if (!CFxHelper::CanInstallDotNet4_5()) {
 		// Explain this as nicely as possible and give up.
@@ -86,7 +95,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		GetModuleFileNameW(hMod, buf, 4096);
 		wcscat(lpCmdLine, L" --rerunningWithoutUAC");
 
-		CUpdateRunner::ShellExecuteFromExplorer(buf, lpCmdLine);
+		CUpdateRunner::ShellExecuteFromExplorer(buf, lpCmdLine, FALSE);
+		exitCode = 0;
+		goto out;
+	} else if (isUacRequired) {
+		wchar_t buf[4096];
+		HMODULE hMod = GetModuleHandle(NULL);
+		GetModuleFileNameW(hMod, buf, 4096);
+		wcscat(lpCmdLine, L" --rerunningWithUAC");
+
+		CUpdateRunner::ShellExecuteFromExplorer(buf, lpCmdLine, TRUE);
 		exitCode = 0;
 		goto out;
 	}
