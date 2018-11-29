@@ -239,6 +239,8 @@ namespace Squirrel
             var assembly = Assembly.GetEntryAssembly();
             if (assemblyLocation == null && assembly == null) {
                 // dunno lol
+                if (UacHelper.IsProcessElevated)
+                    return Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
                 return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             }
 
