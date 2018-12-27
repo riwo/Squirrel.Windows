@@ -4,8 +4,8 @@
     <version>1.9.0</version>
     <authors>GitHub</authors>
     <owners>Paul Betts</owners>
-    <licenseUrl>https://github.com/squirrel/Squirrel.Windows/blob/master/COPYING</licenseUrl>
-    <projectUrl>https://github.com/squirrel/Squirrel.Windows</projectUrl>
+    <licenseUrl>https://github.com/riwo/Squirrel.Windows/blob/master/COPYING</licenseUrl>
+    <projectUrl>https://github.com/riwo/Squirrel.Windows</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/Squirrel/Squirrel.Windows/master/docs/artwork/Squirrel-Logo-Square.png</iconUrl>
 
     <dependencies>
@@ -15,8 +15,8 @@
       <dependency id="SharpCompress" version="0.17.1" />
     </dependencies>
 
-    <id>squirrel.windows</id>
-    <title>Squirrel for Windows</title>
+    <id>squirrel.windows.uac</id>
+    <title>Squirrel for Windows (with UAC support)</title>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>An installation and update framework for Windows applications</description>
     <copyright>Copyright GitHub© 2017</copyright>
