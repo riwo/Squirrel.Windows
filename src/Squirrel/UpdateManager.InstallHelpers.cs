@@ -141,9 +141,9 @@ namespace Squirrel
 
             public void RemoveUninstallerRegistryEntry()
             {
-                var key = UacHelper.GetRegistryBaseKey()
-                    .OpenSubKey(uninstallRegSubKey, true);
-                key.DeleteSubKeyTree(applicationName);
+                RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default).OpenSubKey(uninstallRegSubKey, true)?.DeleteSubKeyTree(applicationName);
+                if (UacHelper.IsUacEnabled)
+                    RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32).OpenSubKey(uninstallRegSubKey, true)?.DeleteSubKeyTree(applicationName);
             }
         }
     }
