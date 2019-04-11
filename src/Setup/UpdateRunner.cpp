@@ -46,6 +46,7 @@ HRESULT CUpdateRunner::AreWeUACElevated()
 {
 	HANDLE hProcess = GetCurrentProcess();
 	HANDLE hToken = 0;
+	PTOKEN_USER pTokenUser = NULL;
 	HRESULT hr;
 
 	if (!OpenProcessToken(hProcess, TOKEN_QUERY, &hToken)) {
@@ -60,13 +61,40 @@ HRESULT CUpdateRunner::AreWeUACElevated()
 		goto out;
 	}
 
-	hr = (elevType == TokenElevationTypeFull ? S_OK : S_FALSE);
+	if (elevType == TokenElevationTypeFull) {
+		hr = S_OK;
+		goto out;
+	}
+
+	if (!GetTokenInformation(hToken, TokenUser, NULL, 0, &dwSize)) {
+		DWORD dwLastError = GetLastError();
+		if (dwLastError != ERROR_INSUFFICIENT_BUFFER) {
+			hr = HRESULT_FROM_WIN32(dwLastError);
+			goto out;
+		}
+	}
+
+	pTokenUser = (PTOKEN_USER)GlobalAlloc(GPTR, dwSize);
+	if (!GetTokenInformation(hToken, TokenUser, pTokenUser, dwSize, &dwSize)) {
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		goto out;
+	}
+
+	LPWSTR SID = 0;
+	if (!ConvertSidToStringSid(pTokenUser->User.Sid, &SID)) {
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		goto out;
+	}
+
+	hr = _wcsicmp(L"S-1-5-18", SID) == 0 ? S_OK : S_FALSE;
 
 out:
 	if (hToken) {
 		CloseHandle(hToken);
 	}
-
+	if (pTokenUser) {
+		GlobalFree(pTokenUser);
+	}
 	return hr;
 }
 
