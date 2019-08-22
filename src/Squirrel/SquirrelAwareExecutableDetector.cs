@@ -29,8 +29,16 @@ namespace Squirrel
             if (!File.Exists(executable)) return null;
             var fullname = Path.GetFullPath(executable);
 
-            return Utility.Retry<int?>(() => 
-                GetAssemblySquirrelAwareVersion(fullname) ?? GetVersionBlockSquirrelAwareValue(fullname));
+            return Utility.Retry<int?>(() =>
+                GetAssemblySquirrelAwareVersion(fullname) ?? GetNetCoreStandaloneAssemblySquirrelAwareVersion(fullname) ?? GetVersionBlockSquirrelAwareValue(fullname));
+        }
+
+        static int? GetNetCoreStandaloneAssemblySquirrelAwareVersion(string executable)
+        {
+            var dllAssembly = Path.ChangeExtension(executable, "dll");
+            if (!File.Exists(dllAssembly))
+                return null;
+            return GetAssemblySquirrelAwareVersion(dllAssembly);
         }
 
         static int? GetAssemblySquirrelAwareVersion(string executable)
