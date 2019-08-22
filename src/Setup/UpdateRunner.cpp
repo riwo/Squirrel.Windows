@@ -66,6 +66,7 @@ HRESULT CUpdateRunner::AreWeUACElevated()
 		goto out;
 	}
 
+	DWORD dwSize;
 	if (!GetTokenInformation(hToken, TokenUser, NULL, 0, &dwSize)) {
 		DWORD dwLastError = GetLastError();
 		if (dwLastError != ERROR_INSUFFICIENT_BUFFER) {
