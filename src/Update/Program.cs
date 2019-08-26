@@ -199,9 +199,9 @@ namespace Squirrel.Update
 
             retry:
                 try {
-                    var updateInfo = await mgr.CheckForUpdate(intention: UpdaterIntention.Update, ignoreDeltaUpdates: ignoreDeltaUpdates, progress: x => Console.WriteLine(x / 3));
-                    await mgr.DownloadReleases(updateInfo.ReleasesToApply, x => Console.WriteLine(33 + x / 3));
-                    await mgr.ApplyReleases(updateInfo, x => Console.WriteLine(66 + x / 3));
+                    var updateInfo = await mgr.CheckForUpdate(intention: UpdaterIntention.Update, ignoreDeltaUpdates: ignoreDeltaUpdates, progress: x => Console.Error.WriteLine(x / 3));
+                    await mgr.DownloadReleases(updateInfo.ReleasesToApply, x => Console.Error.WriteLine(33 + x / 3));
+                    await mgr.ApplyReleases(updateInfo, x => Console.Error.WriteLine(66 + x / 3));
                 } catch (Exception ex) {
                     if (ignoreDeltaUpdates) {
                         this.Log().ErrorException("Really couldn't apply updates!", ex);
@@ -240,8 +240,8 @@ namespace Squirrel.Update
 
             this.Log().Info("Fetching update information, downloading from " + updateUrl);
             using (var mgr = new UpdateManager(updateUrl, appName)) {
-                var updateInfo = await mgr.CheckForUpdate(intention: UpdaterIntention.Update, progress: x => Console.WriteLine(x / 3));
-                await mgr.DownloadReleases(updateInfo.ReleasesToApply, x => Console.WriteLine(33 + x / 3));
+                var updateInfo = await mgr.CheckForUpdate(intention: UpdaterIntention.Update, progress: x => Console.Error.WriteLine(x / 3));
+                await mgr.DownloadReleases(updateInfo.ReleasesToApply, x => Console.Error.WriteLine(33 + x / 3));
 
                 var releaseNotes = updateInfo.FetchReleaseNotes();
 
@@ -264,19 +264,22 @@ namespace Squirrel.Update
 
             this.Log().Info("Fetching update information, downloading from " + updateUrl);
             using (var mgr = new UpdateManager(updateUrl, appName)) {
-                var updateInfo = await mgr.CheckForUpdate(intention: UpdaterIntention.Update, progress: x => Console.WriteLine(x));
-                var releaseNotes = updateInfo.FetchReleaseNotes();
+                var updateInfo = await mgr.CheckForUpdate(intention: UpdaterIntention.Update, progress: x => Console.Error.WriteLine(x));
 
                 var sanitizedUpdateInfo = new {
                     currentVersion = updateInfo.CurrentlyInstalledVersion.Version.ToString(),
                     futureVersion = updateInfo.FutureReleaseEntry.Version.ToString(),
-                    releasesToApply = updateInfo.ReleasesToApply.Select(x => new {
-                        version = x.Version.ToString(),
-                        releaseNotes = releaseNotes.ContainsKey(x) ? releaseNotes[x] : "",
+                    releasesToApply = updateInfo.ReleasesToApply.Select(r => new
+                    {
+                        version = r.Version.ToString(),
+                        filename = r.Filename,
+                        sha1 = r.SHA1,
+                        filesize = r.Filesize
                     }).ToArray(),
                 };
 
-                return SimpleJson.SerializeObject(sanitizedUpdateInfo);
+                var json = SimpleJson.SerializeObject(sanitizedUpdateInfo);
+                return json;
             }
         }
 
@@ -602,7 +605,7 @@ namespace Squirrel.Update
 
                 throw new Exception(msg);
             } else {
-                Console.WriteLine(processResult.Item2);
+                Console.Error.WriteLine(processResult.Item2);
             }
         }
         bool isPEFileSigned(string path)
@@ -664,7 +667,7 @@ namespace Squirrel.Update
 
                 throw new Exception(msg);
             } else {
-                Console.WriteLine(processResult.Item2);
+                Console.Error.WriteLine(processResult.Item2);
             }
         }
 
