@@ -41,8 +41,8 @@
     <Reference Include="DeltaCompressionDotNet, Version=2.0.0.0, Culture=neutral, PublicKeyToken=1d14d6e5194e7f4a, processorArchitecture=MSIL">
       <HintPath>..\..\packages\DeltaCompressionDotNet.2.0.0.0\lib\net20\DeltaCompressionDotNet.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Web.XmlTransform">
-      <HintPath>..\..\packages\Microsoft.Web.Xdt.2.1.1\lib\net40\Microsoft.Web.XmlTransform.dll</HintPath>
+    <Reference Include="Microsoft.Web.XmlTransform, Version=3.0.0.34420, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.Web.Xdt.3.0.0\lib\net40\Microsoft.Web.XmlTransform.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
